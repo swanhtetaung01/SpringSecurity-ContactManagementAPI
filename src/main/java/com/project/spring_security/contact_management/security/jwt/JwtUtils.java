@@ -28,7 +28,7 @@ public class JwtUtils {
     @Value("${spring.app.jwtSecretKey}")
     private String jwtSecretKey;
 
-    public String generateToken(HttpServletRequest request) {
+    public String generateJwtTokenFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         logger.debug("Authorization Header: {}", bearerToken);
         if (bearerToken != null && bearerToken.startsWith("Bearer "))
