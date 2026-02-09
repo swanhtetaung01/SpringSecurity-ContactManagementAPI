@@ -1,5 +1,7 @@
-package com.project.spring_security.contact_management.security;
+package com.project.spring_security.contact_management.controller;
 
+import com.project.spring_security.contact_management.security.LoginRequest;
+import com.project.spring_security.contact_management.security.LoginResponse;
 import com.project.spring_security.contact_management.security.jwt.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

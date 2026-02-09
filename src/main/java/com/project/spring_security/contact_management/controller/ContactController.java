@@ -1,4 +1,4 @@
-package com.project.spring_security.contact_management;
+package com.project.spring_security.contact_management.controller;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
