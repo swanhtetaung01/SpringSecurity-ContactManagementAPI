@@ -1,36 +1,50 @@
+
+```
+
 package com.project.spring_security.contact_management.controller;
 
 import com.project.spring_security.contact_management.security.LoginRequest;
 import com.project.spring_security.contact_management.security.LoginResponse;
 import com.project.spring_security.contact_management.security.jwt.JwtUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import jakarta.annotation.security.permitall;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * AuthController handles user authentication.
+ */
 @RestController
+@ApplicationScoped
 public class AuthController {
 
-    @Autowired
+    @Inject
     private JwtUtils jwtUtils;
 
-    @Autowired
+    @Inject
     private AuthenticationManager authenticationManager;
 
+    /**
+     * Authenticates the user with the provided credentials.
+     *
+     * @param loginRequest The request object containing user credentials.
+     * @return A ResponseEntity with a LoginResponse object on success,
+     * or an HttpStatus.NOT_FOUND on failure.
+     */
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {
         Authentication authentication;
         try {
             authentication = authenticationManager
@@ -42,7 +56,7 @@ public class AuthController {
             Map<String, Object> map = new HashMap<>();
             map.put("message", "Bad credentials");
             map.put("status", false);
-            return new ResponseEntity<Object>(map, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(map, HttpStatus.NOT_FOUND);
         }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -60,3 +74,5 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 }
+
+```

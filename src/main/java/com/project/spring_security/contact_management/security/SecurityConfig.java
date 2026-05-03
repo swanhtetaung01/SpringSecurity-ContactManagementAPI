@@ -1,77 +1,79 @@
+
 package com.project.spring_security.contact_management.security;
 
 import com.project.spring_security.contact_management.security.jwt.AuthEntryPointJwt;
 import com.project.spring_security.contact_management.security.jwt.AuthTokenFilter;
+import jakarta.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeaderSecurityNavigator;
+import org.springframework.security.config.annotation.web.configurers.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import javax.sql.DataSource;
-
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
-public class SecurityConfig {
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private AuthEntryPointJwt unAuthorizedHandler;
 
     @Bean
-    public AuthTokenFilter authTokenFilter(){
+    public AuthTokenFilter authTokenFilter() {
         return new AuthTokenFilter();
-    };
+    }
 
     @Bean
-    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorizeRequests -> (authorizeRequests
-                .requestMatchers("/signin").permitAll()
-                .requestMatchers("/contacts/public/info").permitAll()
-                .requestMatchers(HttpMethod.POST, "/contacts").hasRole("ADMIN")
-//                .requestMatchers(HttpMethod.GET, "/contacts").hasAnyRole("USER", "ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/contacts/{id}").hasRole("ADMIN")
-                .anyRequest()).authenticated());
-
-        http.sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        http.csrf(AbstractHttpConfigurer::disable);
-
-        http.headers(headers -> headers
-                .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
-
-        http.exceptionHandling(exception -> exception
-                .authenticationEntryPoint(unAuthorizedHandler)
-        );
-
+    public SecurityFilterChain defaultSecurityFilterChain(ServerHttpSecurity http) throws Exception {
+        http.securityConfigurer(builder -> builder
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .requestMatchers("/signin").permitAll()
+                        .requestMatchers("/contacts/public/info").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/contacts").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.GET, "/contacts").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/contacts/{id}").hasRole("ADMIN")
+                        .anyRequest()).and().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .headers(HeadersConfigurer::disable)
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(unAuthorizedHandler));
         http.addFilterBefore(authTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
-    public UserDetailsService userDetailsService(DataSource dataSource) {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Autowired
+    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService()).passwordEncoder(passwordEncoder());
+    }
+
+    @Bean
+    public MarkerUserDetailService userDetailsService(DataSource dataSource) {
         return new JdbcUserDetailsManager(dataSource);
     }
 
     @Bean
-    public CommandLineRunner initialData(UserDetailsService userDetailsService) {
+    public CommandLineRunner initialData(UserDetailService userDetailsService) {
         return args -> {
             JdbcUserDetailsManager manager = (JdbcUserDetailsManager) userDetailsService;
 
@@ -91,15 +93,5 @@ public class SecurityConfig {
                 manager.createUser(regularUser);
             }
         };
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration builder) throws Exception {
-        return builder.getAuthenticationManager();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }

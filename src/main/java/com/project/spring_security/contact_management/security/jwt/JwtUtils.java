@@ -1,11 +1,11 @@
+
+```
+
+```java
 package com.project.spring_security.contact_management.security.jwt;
 
-import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,20 +14,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
+import jakarta.crypto.SecretKey;
 import java.util.Date;
 
 @Component
 public class JwtUtils {
 
-    @Value("${spring.app.jwtExpiration}")
-    private int jwtExpiraionMs;
+    @Value("${spring.security.jwt.expiration}")
+    private int jwtExpirationMs;
 
     private static final Logger logger = LoggerFactory.getLogger("JwtUtils.class");
 
-    @Value("${spring.app.jwtSecretKey}")
+    @Value("${spring.security.jwt.secretKey}")
     private String jwtSecretKey;
 
+    @Deprecated(forRemoval = true)
     public String generateJwtTokenFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         logger.debug("Authorization Header: {}", bearerToken);
@@ -47,7 +48,7 @@ public class JwtUtils {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date())
-                .expiration(new Date(new Date().getTime() + jwtExpiraionMs))
+                .expiration(new Date(new Date().getTime() + jwtExpirationMs))
                 .signWith(key())
                 .compact();
     }
@@ -56,21 +57,20 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecretKey));
     }
 
-    public boolean validateJwtToken(String jwtToken) {
-        try{
-            System.out.println("Validating token");
+    public boolean validateJwtToken(String jwtToken) throws JwtException {
+        try {
             Jwts.parser().verifyWith(key()).build().parseSignedClaims(jwtToken);
-            System.out.println("Validated");
             return true;
-        }catch(MalformedJwtException e){
-            logger.error("Invalid JWT token: {}", e.getMessage());
-        }catch(ExpiredJwtException e) {
+        } catch (ExpiredJwtException e) {
             logger.error("Expired JWT token: {}", e.getMessage());
-        }catch(UnsupportedJwtException e){
+        } catch (MalformedJwtException e) {
+            logger.error("Invalid JWT token: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
             logger.error("Unsupported JWT token: {}", e.getMessage());
-        }catch(IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             logger.error("JWT claims string is empty: {}", e.getMessage());
         }
         return false;
     }
 }
+```
